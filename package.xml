@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>gflip</name>
+  <version>1.0.0</version>
+  <description>GFLIP - Geometric FLIRT Phrases for Large Scale Place Recognition</description>
+
+  <maintainer email="afakih@clearpathrobotics.com">Adel Fakih</maintainer>
+  <author email="tipaldi@cs.uni-freiburg.de">Gian Diego Tipaldi</author>
+
+  <license>LGPL</license>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <build_depend>boost</build_depend>
+  <build_depend>eigen</build_depend>
+  <build_depend>doxygen</build_depend>
+  <build_depend>libkdtree++</build_depend>
+  <build_depend>flirtlib</build_depend>
+
+  <exec_depend>boost</exec_depend>
+  <exec_depend>eigen</exec_depend>
+  <exec_depend>libkdtree++</exec_depend>
+  <exec_depend>flirtlib</exec_depend>
+
+  <export>
+    <!-- Specify that this is not really a Catkin package-->
+    <build_type>cmake</build_type>
+  </export>
+</package>
