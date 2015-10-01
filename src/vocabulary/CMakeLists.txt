@@ -11,7 +11,7 @@ SET(vocabulary_HDRS
 ) 
 
 ADD_LIBRARY(vocabulary SHARED ${vocabulary_SRCS})
-TARGET_LINK_LIBRARIES(vocabulary feature geometry)
+TARGET_LINK_LIBRARIES(vocabulary ${FLIRT_LIBRARIES})
 
 install(TARGETS vocabulary
     RUNTIME DESTINATION bin
