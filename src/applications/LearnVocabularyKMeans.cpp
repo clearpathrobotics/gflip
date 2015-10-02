@@ -29,7 +29,7 @@
 #include <vocabulary/KMeansClustering.h>
 #include <vocabulary/HierarchicalKMeansClustering.h>
 #include <geometry/point.h>
-
+#include <utils/PoseEstimation.h>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -54,6 +54,12 @@
 
 #include <limits>
 
+
+/// Workaround to fix a linking bug that requires utils to be explicitly used
+double compute2DPoseWrapper(const std::vector< std::pair<Point2D, Point2D> > &correspondences, OrientedPoint2D& transformation)
+{
+  return compute2DPose(correspondences, transformation);
+}
 
 typedef HierarchicalKMeansClustering<HistogramFeatureWord> VocabularyClustering;
 typedef std::vector< std::vector< InterestPoint *> > InterestPointLog;
