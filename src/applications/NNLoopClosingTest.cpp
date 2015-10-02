@@ -617,7 +617,7 @@ int main(int argc, char **argv){
 
     std::vector< std::vector<unsigned int> > NNTable;
     NNTable.reserve(end+1);
-    std::ifstream nnstream(nnfile);
+    std::ifstream nnstream(nnfile.c_str());
     readNNTable(NNTable, nnstream);
 		 
     m_pointsReference.resize(end + 1);

@@ -23,9 +23,12 @@
 // #include <KMeansClustering.h>
 
 #include <iostream>
-#include <random>
 #include <algorithm>
 #include <cmath>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int.hpp>
+#include <boost/random/uniform_real.hpp>
+#include <boost/random/variate_generator.hpp>
 
 template <typename ClusterType>
 KMeansClustering<ClusterType>::KMeansClustering(unsigned int maxIterations, double minError):
@@ -96,10 +99,10 @@ void ForgyKmeansInitialization<ClusterType>::operator()(std::vector<ClusterType>
 		seeds.resize(seedSize);
 		return;
 	}
-	std::mt19937 rng;	
-	std::uniform_int_distribution<int> distribution(0, points.size() - 1);
-	auto generator = std::bind ( distribution, rng );
-// 	std::variate_generator<std::mt19937&, std::uniform_int<int> > generator(rng, distribution);
+        boost::mt19937 rng;
+        boost::uniform_int<int> distribution(0, points.size() - 1);
+        //auto generator = std::bind ( distribution, rng );
+        boost::variate_generator<boost::mt19937&, boost::uniform_int<int> > generator(rng, distribution);
 	for(unsigned int i = 0; i < seeds.size(); i++) {
 		seeds[i] = points[generator()];
 	}
@@ -114,11 +117,11 @@ void RandomKmeansInitialization<ClusterType>::operator()(std::vector<ClusterType
 		seeds.resize(seedSize);
 		return;
 	}
-	std::mt19937 rng;
-	std::uniform_int_distribution<int> distribution(0, seeds.size() - 1);
-	auto generator = std::bind ( distribution, rng );
+        boost::mt19937 rng;
+        boost::uniform_int<int> distribution(0, seeds.size() - 1);
+        //auto generator = std::bind ( distribution, rng );
 // 	std::uniform_int<int> distribution(0, seeds.size() - 1);
-// 	std::variate_generator<std::mt19937&, std::uniform_int<int> > generator(rng, distribution);
+        boost::variate_generator<boost::mt19937&, boost::uniform_int<int> > generator(rng, distribution);
 	std::vector< std::vector<unsigned int> > assignment(seeds.size());
 	for(unsigned int p = 0; p < points.size(); p++) {
 		unsigned int bestCluster = generator();
@@ -141,13 +144,13 @@ void PlusPlusKmeansInitialization<ClusterType>::operator()(std::vector<ClusterTy
 		seeds.resize(seedSize);
 		return;
 	}
-	std::mt19937 rng;
-	std::uniform_real_distribution<double> distribution(0, 1);
-	std::uniform_int_distribution<int> distribution2(0, seeds.size() - 1);
-	auto generator2 = std::bind(distribution2, rng);
-// 	std::variate_generator<std::mt19937&, std::uniform_int<int> > generator2(rng, distribution2);
-	auto generator = std::bind(distribution, rng);
-// 	std::variate_generator<std::mt19937&, std::uniform_real<double> > generator(rng, distribution);
+        boost::mt19937 rng;
+        boost::uniform_real<double> distribution(0, 1);
+        boost::uniform_int<int> distribution2(0, seeds.size() - 1);
+        //auto generator2 = std::bind(distribution2, rng);
+        boost::variate_generator<boost::mt19937&, boost::uniform_int<int> > generator2(rng, distribution2);
+        //auto generator = std::bind(distribution, rng);
+        boost::variate_generator<boost::mt19937&, boost::uniform_real<double> > generator(rng, distribution);
 	double maxCumulative = 0;
 	std::vector<double> cumulative(points.size());
 	

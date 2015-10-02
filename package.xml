@@ -14,12 +14,12 @@
   <build_depend>boost</build_depend>
   <build_depend>eigen</build_depend>
   <build_depend>doxygen</build_depend>
-  <build_depend>libkdtree++</build_depend>
+  <build_depend>libkdtree++-dev</build_depend>
   <build_depend>flirtlib</build_depend>
 
   <exec_depend>boost</exec_depend>
   <exec_depend>eigen</exec_depend>
-  <exec_depend>libkdtree++</exec_depend>
+  <exec_depend>libkdtree++-dev</exec_depend>
   <exec_depend>flirtlib</exec_depend>
 
   <export>
@@ -27,3 +27,4 @@
     <build_type>cmake</build_type>
   </export>
 </package>
+

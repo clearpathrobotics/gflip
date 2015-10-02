@@ -4,23 +4,17 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8 FATAL_ERROR)
 
 PROJECT(gflip CXX C)
 
-SET(CMAKE_VERBOSE_MAKEFILE 0)
+SET(CMAKE_VERBOSE_MAKEFILE 1)
 
-SET(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${PROJECT_SOURCE_DIR}/src/build_tools")
-
-if(NOT CMAKE_BUILD_TYPE)
-    set (CMAKE_BUILD_TYPE Release)
-endif(NOT CMAKE_BUILD_TYPE)
-
-# Set to build shared objects as option
-OPTION(BUILD_SHARED_LIBS "Build package with shared libraries." ON)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_subdirectory(src)
 
+option(BUILD_DOC "Build the documentation " OFF)
+
 #-- Add the doc target to generate the API documentation
-option(BUILD_DOC "Build the documentation during install phase or when typed make doc" ON)
 if(BUILD_DOC)
-  FIND_PACKAGE(Doxygen)
+FIND_PACKAGE(Doxygen)
   if (NOT DOXYGEN_FOUND)
     message(WARNING "Doxygen is needed to build the documentation. Please install it correctly")
   else()
@@ -32,9 +26,10 @@ if(BUILD_DOC)
     install(DIRECTORY ${PROJECT_BINARY_DIR}/doc/html DESTINATION share/${PROJECT_NAME}/doc)
   endif()
 endif()
-
+message("INSTALLING")
 # Install the licenses and the README
-install(FILES ${PROJECT_SOURCE_DIR}/COPYING ${PROJECT_SOURCE_DIR}/COPYING.LESSER ${PROJECT_SOURCE_DIR}/README DESTINATION share/${PROJECT_NAME})
-
+install(FILES ${PROJECT_SOURCE_DIR}/COPYING ${PROJECT_SOURCE_DIR}/COPYING.LESSER ${PROJECT_SOURCE_DIR}/README.md DESTINATION share/${PROJECT_NAME})
+message("Finished INSTALLING")
 # Install the datasets
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/data DESTINATION share/${PROJECT_NAME} PATTERN ".svn" EXCLUDE)
+

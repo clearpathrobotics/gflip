@@ -32,7 +32,7 @@ TARGET_LINK_LIBRARIES(gflip_cl gflip)
 ADD_EXECUTABLE(gflip_cl_onequery gflip_cl_onequery.cpp)
 TARGET_LINK_LIBRARIES(gflip_cl_onequery gflip)
 
-#install(TARGETS featureExtractor learnVocabularyKMeans generateBoW nnLoopClosingTest generateNN GFPLoopClosingTest gflip_cl gflip_cl_onequery
-#    RUNTIME DESTINATION bin
-#    LIBRARY DESTINATION lib/flirtlib
-#    ARCHIVE DESTINATION lib/flirtlib)
+install(TARGETS featureExtractor learnVocabularyKMeans generateBoW nnLoopClosingTest generateNN GFPLoopClosingTest gflip_cl gflip_cl_onequery
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
