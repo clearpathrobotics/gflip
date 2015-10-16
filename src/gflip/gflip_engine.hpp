@@ -34,7 +34,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <boost/math/special_functions/binomial.hpp>
-#include <boost/tuple/tuple.hpp>
 #include <boost/foreach.hpp>
 #include <sys/time.h>  
 #include <algorithm>
@@ -65,7 +64,6 @@ public:
   std::vector <double> w_x, w_y, word_weight, tfidf_w;
   std::map<int, std::vector<int> > histogram;
   std::map<int, std::vector<int> > normgfp_rc;
-
   std::map<int, int> word_ref;
   double sum_weight,  norm_wgv;
   int max_histogram;
@@ -87,7 +85,6 @@ public:
       int j=0;
       BOOST_FOREACH(int other, w)
       {
-
         if(other==word)
         {
           normgfp_rc[index-j].push_back(word);
@@ -193,21 +190,19 @@ class gflip_engine
 		std::vector<double> cached_binomial_coeff, mtchgfp_rc_idf_sum, normgfp_rc_idf_sum;
 		std::vector <int> mtchgfp_min_det_idx, mtchgfp_max_det_idx, mtchgfp_rc_weak_match, normgfp_rc_weak_match;
 		std::vector<char> mtchgfp_used_doc_idx;
-
-                // contains the word with the maximum frequency in each doc
-                std::vector < double > mxtf_val;
+        std::vector < double > mxtf_val;
 
 		//~ functions
  		double norm_gfp(std::vector <int> & query_v);
-                double norm_gfp(scan_bow & bow);
+        double norm_gfp(scan_bow & bow);
  		void matching_bow(std::vector <int> &query_v );
 		void matching_gfp(std::vector <int> &query_v );
 		void voting_tfidf_weak_verificationOLD(std::vector <int> &query_v );		
 		void reformulate_to_bagofdistances(void);
 		void cache_binomial_coeff(void);
-                void add_doc_stats(int doc_id);
-                void compute_idfs();
-                void compute_tf_idfs();
+        void add_doc_stats(int doc_id);
+        void compute_idfs();
+        void compute_tf_idfs();
 
 	
 	public:
@@ -238,18 +233,18 @@ class gflip_engine
 		 */		
  		void build_tfidf(void);
 
-                /**
-                 * @brief update_tfidf
-                 * @param number of new scans added to laserscan_bow that are not yet
-                 * considered in the tf_idf
-                 */
-                void update_tfidf(int num_scans);
+        /**
+         * @brief update_tfidf
+         * @param number of new scans added to laserscan_bow that are not yet
+         * considered in the tf_idf
+         */
+        void update_tfidf(int num_scans);
 
-                /**
-                 * @brief update_tfidf
-                 * Updates the tf_idf using all the scans
-                 */
-                void update_tfidf();
+        /**
+         * @brief update_tfidf
+         * Updates the tf_idf using all the scans
+         */
+        void update_tfidf();
 
 		/**
 		 * Matches all the scans in the dataset vs all the scans in the dataset
@@ -283,8 +278,11 @@ class gflip_engine
 		 */
 		void prepare(void);
 
-
-                void init(void);
+        /**
+		 * Initialize the binomial coefficient cash
+         * Allocates containers
+		 */
+        void init(void);
 
 		/**
 		 * Constructor
@@ -297,14 +295,13 @@ class gflip_engine
 		 * @author Luciano Spinello
 		 */  
 
-                gflip_engine (int krnl, int kbt, int bt=DEFAULT_BAGDISTANCE, int bstype=DEFAULT_BOWSUBTYPE, double a_vss=DEFAULT_ALPHASMOOTH)
+		gflip_engine (int krnl, int kbt, int bt=DEFAULT_BAGDISTANCE, int bstype=DEFAULT_BOWSUBTYPE, double a_vss=DEFAULT_ALPHASMOOTH)
 		{
 			bow_type = bt;
 			kbest = kbt;
 			wgv_kernel_size = krnl;
  			bow_subtype= bstype;
 			alpha_vss = a_vss;
-
 			
 			//~ basic defaults for bag of distances
 			bow_dst_start= DEFAULT_BOWDST_START;
@@ -313,13 +310,11 @@ class gflip_engine
 
 		}
 
-                void setDictionaryDimension(int dictionary_size)
-                {
-                  dictionary_dimensions = dictionary_size;
-                  std::cout<<"Dictionary dimensions "<<dictionary_dimensions<<std::endl;
-                  max_bow_len = (dictionary_dimensions+1)*2;
-                  tf_idf = std::vector <tf_idf_db> (dictionary_dimensions);
-                }
+        void setDictionaryDimension(int dictionary_size)
+        {
+            dictionary_dimensions = dictionary_size;
+            std::cout<<"Dictionary dimension "<<dictionary_dimensions<<std::endl;
+        }
 		
 };
 

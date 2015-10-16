@@ -74,21 +74,20 @@ void gflip_engine::init()
 }
 
 void gflip_engine::prepare(void)
-{
-
-        cache_binomial_coeff();
+{	
+ 	cache_binomial_coeff();
 
 	if(bow_type==1)
 		reformulate_to_bagofdistances();
-        build_tfidf();
+	
+	build_tfidf();	
+	
 
 	//~ norms
-
 	normgfp_rc_idf_sum.resize(max_bow_len);
 	normgfp_rc_weak_match.resize(max_bow_len);
-
-        for(uint i=0;i<laserscan_bow.size();i++)
-          laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i].w);
+	for(uint i=0;i<laserscan_bow.size();i++)
+		laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i].w);
 
 	//~ prepare for matching	
 	mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
@@ -97,7 +96,6 @@ void gflip_engine::prepare(void)
 	mtchgfp_used_doc_idx.resize(laserscan_bow.size());
 	mtchgfp_max_det_idx = std::vector <int> (laserscan_bow.size());
 	mtchgfp_min_det_idx = std::vector <int> (laserscan_bow.size());
-
 }
 
  
@@ -216,6 +214,7 @@ double gflip_engine::norm_gfp(std::vector <int> & query_v)
 
 void gflip_engine::matching_gfp(std::vector <int> &query_v)
 {
+        ScopedTimer scopedTimer("Matching took");
 	int middleidx = max_bow_len/2;
         //TODO Fix this so we don't have to reallocate everytime
         mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
@@ -378,7 +377,7 @@ void gflip_engine::query(int dtype, std::vector <int> &query_v, std::vector < st
 	if(dtype ==2)
 		matching_gfp(query_v);
 		
-        *scoreoutput = &scoreset;
+	*scoreoutput = &scoreset;	
 }
 
 // ---------------------------------------------------------
@@ -440,8 +439,7 @@ void gflip_engine::run_evaluation(int dtype)
 }
 
  
-
-
+ 
 
 // ---------------------------------------------------------
 
@@ -474,9 +472,12 @@ void gflip_engine::update_tfidf()
 
 void gflip_engine::update_tfidf(int nscans)
 {
-  for (int i=laserscan_bow.size()- nscans; i<laserscan_bow.size(); ++i)
   {
-    add_doc_stats(i);
+    ScopedTimer scopedTimer("Adding scans");
+    for (int i=laserscan_bow.size()- nscans; i<laserscan_bow.size(); ++i)
+    {
+      add_doc_stats(i);
+    }
   }
   {
     ScopedTimer scopedTimer("Updating tf_idf");
@@ -594,8 +595,8 @@ void gflip_engine::build_tfidf(void)
 	dictionary_dimensions = maxid;
 	//~ do it large
 	max_bow_len = (max_bow_len+1)*2;
-        //std::cout << "Detected dictionary dimension: "<< maxid << " @ "<< maxid_idx << std::endl;
-        //std::cout << "Detected max bow len : "<< max_bow_len << std::endl;
+	//std::cout << "Detected dictionary dimension: "<< maxid << " @ "<< maxid_idx << std::endl;
+	//std::cout << "Detected max bow len : "<< max_bow_len << std::endl;
 
 	tf_idf = std::vector <tf_idf_db> (maxid);
 	for(int word_id=0; word_id<maxid; word_id++)
@@ -632,10 +633,7 @@ void gflip_engine::build_tfidf(void)
 	}
 	
 	//~ tfsmoothing
-    // Get the maximum TF value of each doc (independent of others)
-    // Finds the word that has the heighest frequency in the doc. Not sure if it should be 
-// done via the tf_idb database
-        mxtf_val = std::vector < double >(laserscan_bow.size(),-DBL_MAX);
+	std::vector < double > mxtf_val (laserscan_bow.size(),-DBL_MAX);
 	for(int doc_id=0;doc_id<(int)laserscan_bow.size();doc_id++)
 	{
 		std::set<int> used_idx;
@@ -647,8 +645,8 @@ void gflip_engine::build_tfidf(void)
 					if( tf_idf[word_id].term_count_unnormalized[h] > mxtf_val [doc_id] )
 						mxtf_val[doc_id] = tf_idf[word_id].term_count_unnormalized[h];
 		}
+		//~ printf("%d %g %d\n",doc_id,mxtf_val,mxtf_idx);
 	}
-    
 	
 	//~ normedtfidf, wtfidf
 	for(int doc_id=0;doc_id<(int)laserscan_bow.size();doc_id++)
