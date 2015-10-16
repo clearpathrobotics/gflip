@@ -49,6 +49,8 @@
 #define DEFAULT_ALPHASMOOTH 0.4
 #define DEFAULT_BAGDISTANCE 0
 #define DEFAULT_CACHEBINOMIAL 10000
+//~ TODO change the matching function so this is not needed anymore
+#define MAX_BOW_LENGTH 1000
 
 /**
  * Contains a 2D scan represented by FLIRT words identified by their index, their (TF-IDF) weights, their norm for GFP
@@ -63,7 +65,7 @@ public:
   std::vector <double> w_x, w_y, word_weight, tfidf_w;
   std::map<int, std::vector<int> > histogram;
   std::map<int, std::vector<int> > normgfp_rc;
-  //std::map<int, double> normgfp_rc;
+
   std::map<int, int> word_ref;
   double sum_weight,  norm_wgv;
   int max_histogram;
@@ -243,8 +245,11 @@ class gflip_engine
                  */
                 void update_tfidf(int num_scans);
 
-                void build_tfidf_new();
-                void build_tfidf_new1();
+                /**
+                 * @brief update_tfidf
+                 * Updates the tf_idf using all the scans
+                 */
+                void update_tfidf();
 
 		/**
 		 * Matches all the scans in the dataset vs all the scans in the dataset
@@ -277,6 +282,9 @@ class gflip_engine
 		 * @author Luciano Spinello
 		 */
 		void prepare(void);
+
+
+                void init(void);
 
 		/**
 		 * Constructor

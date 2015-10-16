@@ -25,64 +25,70 @@
 #include <time.h>
 // ---------------------------------------------------------
 
+
+class ScopedTimer
+{
+public:
+
+  ScopedTimer(std::string s = "no_name")
+    : name(s)
+  {
+    clock_gettime(CLOCK_REALTIME,  &begin);
+  }
+
+  ~ScopedTimer()
+  {
+    clock_gettime(CLOCK_REALTIME,  &end);
+    double duration = ((end.tv_sec * 10e9 + end.tv_nsec) -
+                      (begin.tv_sec * 10e9 + begin.tv_nsec)) * 1e-6;
+    printf("%s took: %f\n", name.c_str(), duration);
+  }
+
+private:
+  timespec begin;
+  timespec end;
+  std::string name;
+};
+
+void gflip_engine::init()
+{
+  max_bow_len = MAX_BOW_LENGTH;
+  tf_idf = std::vector <tf_idf_db> (dictionary_dimensions);
+
+  cache_binomial_coeff();
+
+
+  if(bow_type==1)
+          reformulate_to_bagofdistances();
+
+  normgfp_rc_idf_sum.resize(max_bow_len);
+  normgfp_rc_weak_match.resize(max_bow_len);
+
+  //mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
+  //mtchgfp_rc_idf_sum.resize(laserscan_bow.size() * max_bow_len);
+
+  //mtchgfp_used_doc_idx.resize(laserscan_bow.size());
+  //mtchgfp_max_det_idx = std::vector <int> (laserscan_bow.size());
+  //mtchgfp_min_det_idx = std::vector <int> (laserscan_bow.size());
+
+}
+
 void gflip_engine::prepare(void)
-{	
-        timespec s_crt, e_crt;
-        clock_gettime(CLOCK_REALTIME,  &s_crt);
- 	cache_binomial_coeff();
+{
+
+        cache_binomial_coeff();
 
 	if(bow_type==1)
 		reformulate_to_bagofdistances();
-	
-        build_tfidf_new1();
-        clock_gettime(CLOCK_REALTIME,  &e_crt);
-        double dur_crt = ((e_crt.tv_sec * 10e9 + e_crt.tv_nsec) -
-                          (s_crt.tv_sec * 10e9 + s_crt.tv_nsec)) * 1e-6;
-        printf("Build tfidf new took %f %d\n", dur_crt, laserscan_bow.size() );
-
-
-        std::vector<tf_idf_db> m_idf = tf_idf;
-        tf_idf.clear();
-        clock_gettime(CLOCK_REALTIME,  &s_crt);
         build_tfidf();
-
-        clock_gettime(CLOCK_REALTIME,  &e_crt);
-        dur_crt = ((e_crt.tv_sec * 10e9 + e_crt.tv_nsec) -
-                          (s_crt.tv_sec * 10e9 + s_crt.tv_nsec)) * 1e-6;
-        printf("Build tfidf took %f %d\n", dur_crt, laserscan_bow.size() );
-
-        for (int i=0; i<tf_idf.size(); ++i)
-        {
-          tf_idf[i].compare(m_idf[i]);
-        //  std::cout<<i<<" ok"<<std::endl;
-        }
-	
 
 	//~ norms
 
 	normgfp_rc_idf_sum.resize(max_bow_len);
 	normgfp_rc_weak_match.resize(max_bow_len);
-        std::vector<double> temp_norms(laserscan_bow.size());
-        clock_gettime(CLOCK_REALTIME,  &s_crt);
+
         for(uint i=0;i<laserscan_bow.size();i++)
-        {
-                temp_norms[i] = norm_gfp(laserscan_bow[i].w);
-        }
-        clock_gettime(CLOCK_REALTIME,  &e_crt);
-        dur_crt = ((e_crt.tv_sec * 10e9 + e_crt.tv_nsec) -
-                          (s_crt.tv_sec * 10e9 + s_crt.tv_nsec)) * 1e-6;
-        printf("Normalizing gfp old took %f %d\n", dur_crt, laserscan_bow.size() );
-        clock_gettime(CLOCK_REALTIME,  &s_crt);
-        for(uint i=0;i<laserscan_bow.size();i++)
-          laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i]);
-        clock_gettime(CLOCK_REALTIME,  &e_crt);
-        dur_crt = ((e_crt.tv_sec * 10e9 + e_crt.tv_nsec) -
-                          (s_crt.tv_sec * 10e9 + s_crt.tv_nsec)) * 1e-6;
-        printf("Normalizing gfp took %f %d\n", dur_crt, laserscan_bow.size() );
-        for(uint i=0;i<laserscan_bow.size();i++)
-        {
-           assert(laserscan_bow[i].norm_wgv == temp_norms[i]);
-        }
+          laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i].w);
 
 	//~ prepare for matching	
 	mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
@@ -211,6 +217,13 @@ double gflip_engine::norm_gfp(std::vector <int> & query_v)
 void gflip_engine::matching_gfp(std::vector <int> &query_v)
 {
 	int middleidx = max_bow_len/2;
+        //TODO Fix this so we don't have to reallocate everytime
+        mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
+        mtchgfp_rc_idf_sum.resize(laserscan_bow.size() * max_bow_len);
+        mtchgfp_used_doc_idx.resize(laserscan_bow.size());
+        mtchgfp_max_det_idx = std::vector <int> (laserscan_bow.size());
+        mtchgfp_min_det_idx = std::vector <int> (laserscan_bow.size());
+
 	std::fill(mtchgfp_used_doc_idx.begin(), mtchgfp_used_doc_idx.end(), 0);
 	std::fill(mtchgfp_min_det_idx.begin(), mtchgfp_min_det_idx.end(), +INT_MAX);
 	std::fill(mtchgfp_max_det_idx.begin(), mtchgfp_max_det_idx.end(), -INT_MAX);
@@ -366,9 +379,6 @@ void gflip_engine::query(int dtype, std::vector <int> &query_v, std::vector < st
 		matching_gfp(query_v);
 		
         *scoreoutput = &scoreset;
-        //std::vector < std::pair <double, int> >::const_iterator iter  = scoreset.begin();
-       // for(; iter!=scoreset.end(); ++iter)
-       //   std::cout<<iter->first<<" "<<iter->second<<std::endl;
 }
 
 // ---------------------------------------------------------
@@ -430,83 +440,58 @@ void gflip_engine::run_evaluation(int dtype)
 }
 
  
- 
+
+
 
 // ---------------------------------------------------------
 
-void gflip_engine::update_tfidf(int nscans)
+void gflip_engine::update_tfidf()
 {
-  //~ find id size, maxlen
-  max_bow_len = max_bow_len/2 - 1;
-  int maxid = dictionary_dimensions - 1;
-
-  for(uint i=laserscan_bow.size()-nscans;i<laserscan_bow.size();i++)
   {
-    double max_freq = -DBL_MAX;
-
-    for(uint j=0;j<laserscan_bow[i].w.size();j++)
+    ScopedTimer scopedTimer("Adding docs");
+    for (int i=0; i<laserscan_bow.size(); ++i)
     {
-      unsigned int freq = 0;
-
-      if(laserscan_bow[i].w[j] > maxid)
-      {
-        maxid = laserscan_bow[i].w[j];
-      }
-      for(uint k=0;k<laserscan_bow[i].w.size();k++)
-        if(laserscan_bow[i].w[k]==laserscan_bow[i].w[j])
-          ++freq;
-      if(freq>max_freq)
-        max_freq = freq;
-
+      add_doc_stats(i);
     }
-
-    if((int)laserscan_bow[i].w.size() > max_bow_len)
-      max_bow_len=laserscan_bow[i].w.size();
-    mxtf_val.push_back(max_freq);
   }
-  //~ include last number
-  maxid+=1;
-  if (maxid > dictionary_dimensions)
-    for (int i =0 ; i< maxid - dictionary_dimensions; ++i)
-      tf_idf.push_back(tf_idf_db());
-  dictionary_dimensions = maxid;
-  //~ do it large
-  max_bow_len = (max_bow_len+1)*2;
 
-  for(int word_id=0; word_id<maxid; word_id++)
   {
-    //~ doc id
-    for(uint i=laserscan_bow.size()-nscans;i<laserscan_bow.size();i++)
-    {
-      int term_count_unnormalized=0;
-      tf_idf_db_ordercache w_order;
-      for(uint j=0;j<laserscan_bow[i].w.size();j++)
-      {
-        if(laserscan_bow[i].w[j] == word_id)
-        {
-          term_count_unnormalized++;
-          w_order.pos.push_back(j);
-        }
-      }
-      //~ found a word match
-      if(term_count_unnormalized)
-      {
-        tf_idf[word_id].term_count_unnormalized.push_back(term_count_unnormalized);
-        tf_idf[word_id].num_words.push_back(laserscan_bow[i].w.size());
-        tf_idf[word_id].doc_id.push_back(i);
-        tf_idf[word_id].term_count.push_back((double)term_count_unnormalized / (double)laserscan_bow[i].w.size());
-        tf_idf[word_id].word_order.push_back(w_order);
-        tf_idf[word_id].tf_idf_doc_normed.push_back(-1);
-        tf_idf[word_id].wf_idf_doc_normed.push_back(-1);
-        tf_idf[word_id].ntf_idf_doc_normed.push_back(-1);
-      }
-    }
-    tf_idf[word_id].num_doc_containing_the_word = tf_idf[word_id].doc_id.size();
-    tf_idf[word_id].corpus_size = laserscan_bow.size();
-    tf_idf[word_id].idf = log( (double)tf_idf[word_id].corpus_size / (double) tf_idf[word_id].num_doc_containing_the_word );
+    ScopedTimer scopedTimer("Updating tf_idf");
+    compute_idfs();
+    compute_tf_idfs();
+  }
+
+  {
+    ScopedTimer scopedTimer(" tf_idf");
+    for(uint i=0;i<laserscan_bow.size();i++)
+      laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i]);
   }
 
 }
+
+// ---------------------------------------------------------
+
+
+void gflip_engine::update_tfidf(int nscans)
+{
+  for (int i=laserscan_bow.size()- nscans; i<laserscan_bow.size(); ++i)
+  {
+    add_doc_stats(i);
+  }
+  {
+    ScopedTimer scopedTimer("Updating tf_idf");
+    compute_idfs();
+    compute_tf_idfs();
+  }
+
+  {
+    ScopedTimer scopedTimer("Normalizing tf_idf");
+    for(uint i=0;i<laserscan_bow.size();i++)
+      laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i]);
+  }
+}
+
+
 
 // ---------------------------------------------------------
 
@@ -579,137 +564,6 @@ void gflip_engine::compute_idfs()
 }
 
 
-void gflip_engine::build_tfidf_new1(void)
-{
-  //~ Assume we already have dictionary dimensions provided by the user
-  //~ Assume the max_bow_len equal the dictionary dimensions
-
-  max_bow_len = (dictionary_dimensions+1)*2;
-  tf_idf = std::vector <tf_idf_db> (dictionary_dimensions);
-  for (int i=0; i<laserscan_bow.size(); ++i)
-  {
-    add_doc_stats(i);
-  }
-  compute_idfs();
-  compute_tf_idfs();
-
-}
-
-
-void gflip_engine::build_tfidf_new(void)
-{
-  //~ Assume we already have dictionary dimensions provided by the user
-  //~ Assume the max_bow_len equal the dictionary dimensions
-
-  max_bow_len = (dictionary_dimensions+1)*2;
-  tf_idf = std::vector <tf_idf_db> (dictionary_dimensions);
-
-  for(uint i=0;i<laserscan_bow.size();i++)
-  {
-    std::map<int, std::vector<int> >::const_iterator it = laserscan_bow[i].histogram.begin();
-    for(; it != laserscan_bow[i].histogram.end(); ++it)
-    {
-      int word_id = it->first;
-      tf_idf[word_id].term_count_unnormalized.push_back(it->second.size());
-      tf_idf[word_id].num_words.push_back(laserscan_bow[i].w.size());
-      laserscan_bow[i].word_ref[word_id] = tf_idf[word_id].doc_id.size();
-      tf_idf[word_id].doc_id.push_back(i);
-      tf_idf[word_id].term_count.push_back((double)it->second.size() / (double)laserscan_bow[i].w.size());
-      tf_idf[word_id].word_order.push_back(tf_idf_db_ordercache(it->second));
-      tf_idf[word_id].tf_idf_doc_normed.push_back(-1);
-      tf_idf[word_id].wf_idf_doc_normed.push_back(-1);
-      tf_idf[word_id].ntf_idf_doc_normed.push_back(-1);
-    }
-  }
-  for (uint word_id = 0; word_id < dictionary_dimensions; ++word_id)
-  {
-    tf_idf[word_id].num_doc_containing_the_word = tf_idf[word_id].doc_id.size();
-    tf_idf[word_id].corpus_size = laserscan_bow.size();
-    tf_idf[word_id].idf = log( (double)tf_idf[word_id].corpus_size / (double) tf_idf[word_id].num_doc_containing_the_word );
-  }
-
-  //~ normedtfidf, wtfidf
-  for(int doc_id=0;doc_id<(int)laserscan_bow.size();doc_id++)
-  {
-    std::map<int, int>::const_iterator word_id_iter = laserscan_bow[doc_id].word_ref.begin();
-    double sum=0,sum_wf=0,sum_vss=0;
-    //std::cout<<"Word id size "<<laserscan_bow[doc_id].word_ref.size()<<" "<<laserscan_bow[doc_id].w.size()<<std::endl;
-    for (; word_id_iter!=laserscan_bow[doc_id].word_ref.end(); ++word_id_iter)
-        {
-          int doc_ref = word_id_iter->second;
-          tf_idf_db & db = tf_idf[word_id_iter->first];
-          double val = db.tf_idf_doc_normed[doc_ref]  = db.term_count[doc_ref] * db.idf;
-          double val_wf = db.wf_idf_doc_normed[doc_ref] =  (1 + log(db.term_count_unnormalized[doc_ref]) ) * db.idf;
-          double val_vss = db.ntf_idf_doc_normed[doc_ref] = alpha_vss + ( (1.0 - alpha_vss) * db.term_count_unnormalized[doc_ref]) / laserscan_bow[doc_id].max_histogram;
-          sum+=val*val;
-          sum_wf+=val_wf*val_wf;
-          sum_vss+=val_vss*val_vss;
-        }
-
-    //~ norm
-    double norm=sqrt(sum);
-    double norm_wf=sqrt(sum_wf);
-    double norm_vss=sqrt(sum_vss);
-    double versum=0, versum_wf=0, versum_vss=0;
-
-    for (word_id_iter = laserscan_bow[doc_id].word_ref.begin(); word_id_iter!=laserscan_bow[doc_id].word_ref.end(); ++word_id_iter)
-        {
-      int doc_ref = word_id_iter->second;
-      tf_idf_db & db = tf_idf[word_id_iter->first];
-      std::cout<<doc_id<<" "<<word_id_iter->first<<"--> "<<db.tf_idf_doc_normed[doc_ref]<<" "<<norm<<std::endl;
-          db.tf_idf_doc_normed[doc_ref] /= norm;
-          db.wf_idf_doc_normed[doc_ref] /= norm_wf;
-          db.ntf_idf_doc_normed[doc_ref] /= norm_vss;
-
-
-          versum += db.tf_idf_doc_normed[doc_ref]*db.tf_idf_doc_normed[doc_ref];
-          versum_wf += db.wf_idf_doc_normed[doc_ref]*db.wf_idf_doc_normed[doc_ref];
-          versum_vss += db.ntf_idf_doc_normed[doc_ref]*db.ntf_idf_doc_normed[doc_ref];
-        }
-
-    //~ verification
-    if( fabs(sqrt(versum) -1 ) > 0.00001 && sum > 0.00001 )
-    {
-      std::cout << "ERROR NORMALIZ FAIL "<<sqrt(versum)<< " "<< doc_id<< " "<< laserscan_bow[doc_id].w.size() << std::endl;
-      exit(1);
-    }
-
-    if( fabs(sqrt(versum_wf) -1 ) > 0.00001 && sum_wf > 0.00001 )
-    {
-      std::cout << "ERROR WFIDF NORMALIZ FAIL "<<sqrt(versum_wf)<< " "<< doc_id<< " "<< laserscan_bow[doc_id].w.size() << std::endl;
-      exit(1);
-    }
-
-    if( fabs(sqrt(versum_vss) -1 ) > 0.00001 && sum_vss > 0.00001 )
-    {
-      std::cout << "ERROR VSSIDF NORMALIZ FAIL "<<sqrt(versum_vss)<< " "<< doc_id<< " "<< laserscan_bow[doc_id].w.size() << std::endl;
-      exit(1);
-    }
-
-  }
-
- // ~ verification
-  for(uint i=0;i<tf_idf.size();i++)
-    for(uint h=0;h<tf_idf[i].doc_id.size();h++)
-    {
-      if(tf_idf[i].tf_idf_doc_normed[h] < 0)
-      {
-        std::cout << "ERROR NORMALIZ NO INT"<<std::endl;
-        exit(1);
-      }
-      if(tf_idf[i].wf_idf_doc_normed[h] < 0)
-      {
-        std::cout << "ERROR wf_idf NO INT"<< i << " "<< h << " "<< tf_idf[i].wf_idf_doc_normed[h] << " "<<  std::endl;
-        exit(1);
-      }
-      if(tf_idf[i].ntf_idf_doc_normed[h] < 0)
-      {
-        std::cout << "ERROR vss NO INT"<< i << " "<< h << " "<< tf_idf[i].ntf_idf_doc_normed[h] << " "<<  std::endl;
-        exit(1);
-      }
-
-    }
-}
 
 
 
@@ -793,32 +647,15 @@ void gflip_engine::build_tfidf(void)
 					if( tf_idf[word_id].term_count_unnormalized[h] > mxtf_val [doc_id] )
 						mxtf_val[doc_id] = tf_idf[word_id].term_count_unnormalized[h];
 		}
-        /*double max_value = 0;
-        std::vector<int>::const_iterator it = laserscan_bow[doc_id].w.begin();
-        for (; it != laserscan_bow[doc_id].w.end(); ++it)
-        { 
-           int cnt = 0;
-           std::vector<int>::const_iterator it1 = laserscan_bow[doc_id].w.begin();
-           for (; it1 != laserscan_bow[doc_id].w.end(); ++it1)
-              if(*it1==*it)
-                 cnt++;
-           //int cnt = std::count(laserscan_bow[doc_id].w.begin(),laserscan_bow[doc_id].w.end() , *it);
-           if (cnt>max_value)
-              max_value = cnt;
-        }
-		//~ printf("%d %g %d\n",doc_id,mxtf_val,mxtf_idx);
-        printf("%f %f\n",mxtf_val[doc_id],max_value);*/
 	}
     
 	
 	//~ normedtfidf, wtfidf
 	for(int doc_id=0;doc_id<(int)laserscan_bow.size();doc_id++)
 	{
-       // just a set representing laserscan_bow[doc_id].w
 		std::set<int> used_idx;
 		for(uint j=0;j<laserscan_bow[doc_id].w.size();j++)
 			used_idx.insert(laserscan_bow[doc_id].w[j]);
-               // std::cout<<"old word id size "<<used_idx.size()<<" "<<laserscan_bow[doc_id].w.size()<<std::endl;
 		//~ sum
 		double sum=0,sum_wf=0,sum_vss=0;
 		for (std::set<int>::iterator word_id_iter=used_idx.begin(); word_id_iter!=used_idx.end(); word_id_iter++)
