@@ -194,15 +194,15 @@ class gflip_engine
 
 		//~ functions
  		double norm_gfp(std::vector <int> & query_v);
-        double norm_gfp(scan_bow & bow);
+                double norm_gfp(scan_bow & bow);
  		void matching_bow(std::vector <int> &query_v );
 		void matching_gfp(std::vector <int> &query_v );
 		void voting_tfidf_weak_verificationOLD(std::vector <int> &query_v );		
 		void reformulate_to_bagofdistances(void);
 		void cache_binomial_coeff(void);
-        void add_doc_stats(int doc_id);
-        void compute_idfs();
-        void compute_tf_idfs();
+                void add_doc_stats(int doc_id);
+                void compute_idfs();
+                void compute_tf_idfs();
 
 	
 	public:
@@ -233,18 +233,18 @@ class gflip_engine
 		 */		
  		void build_tfidf(void);
 
-        /**
-         * @brief update_tfidf
-         * @param number of new scans added to laserscan_bow that are not yet
-         * considered in the tf_idf
-         */
-        void update_tfidf(int num_scans);
+                /**
+                 * @brief update_tfidf with new scans
+                 * @param number of new scans added to laserscan_bow that are not yet
+                 * considered in the tf_idf
+                 */
+                void update_tfidf(int num_scans);
 
-        /**
-         * @brief update_tfidf
-         * Updates the tf_idf using all the scans
-         */
-        void update_tfidf();
+                /**
+                 * @brief update_tfidf
+                 * Updates the tf_idf for all scans in laserscan_bows
+                 */
+                void update_tfidf();
 
 		/**
 		 * Matches all the scans in the dataset vs all the scans in the dataset
@@ -278,11 +278,11 @@ class gflip_engine
 		 */
 		void prepare(void);
 
-        /**
+		/**
 		 * Initialize the binomial coefficient cash
-         * Allocates containers
+		 * Allocates containers
 		 */
-        void init(void);
+		void init(void);
 
 		/**
 		 * Constructor
@@ -310,11 +310,15 @@ class gflip_engine
 
 		}
 
-        void setDictionaryDimension(int dictionary_size)
-        {
-            dictionary_dimensions = dictionary_size;
-            std::cout<<"Dictionary dimension "<<dictionary_dimensions<<std::endl;
-        }
+		/*
+		 * Sets the dimension (number of words)  of the dictionary
+		 * @param dictionary_size number of words in the dictionary
+		 */
+                void setDictionaryDimension(int dictionary_size)
+		{ 
+                       dictionary_dimensions = dictionary_size;
+                       std::cout<<"Dictionary dimension "<<dictionary_dimensions<<std::endl;
+		}
 		
 };
 

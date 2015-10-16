@@ -214,14 +214,14 @@ double gflip_engine::norm_gfp(std::vector <int> & query_v)
 
 void gflip_engine::matching_gfp(std::vector <int> &query_v)
 {
-        ScopedTimer scopedTimer("Matching took");
+	ScopedTimer scopedTimer("Matching took");
 	int middleidx = max_bow_len/2;
-        //TODO Fix this so we don't have to reallocate everytime
-        mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
-        mtchgfp_rc_idf_sum.resize(laserscan_bow.size() * max_bow_len);
-        mtchgfp_used_doc_idx.resize(laserscan_bow.size());
-        mtchgfp_max_det_idx = std::vector <int> (laserscan_bow.size());
-        mtchgfp_min_det_idx = std::vector <int> (laserscan_bow.size());
+	//TODO Fix this so we don't have to reallocate everytime
+	mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
+	mtchgfp_rc_idf_sum.resize(laserscan_bow.size() * max_bow_len);
+	mtchgfp_used_doc_idx.resize(laserscan_bow.size());
+	mtchgfp_max_det_idx = std::vector <int> (laserscan_bow.size());
+	mtchgfp_min_det_idx = std::vector <int> (laserscan_bow.size());
 
 	std::fill(mtchgfp_used_doc_idx.begin(), mtchgfp_used_doc_idx.end(), 0);
 	std::fill(mtchgfp_min_det_idx.begin(), mtchgfp_min_det_idx.end(), +INT_MAX);
