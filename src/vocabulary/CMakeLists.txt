@@ -1,17 +1,17 @@
-SET(vocabulary_SRCS 
+set(vocabulary_SRCS
   Vocabulary.cpp
-) 
+)
 
-SET(vocabulary_HDRS 
+set(vocabulary_HDRS
   HierarchicalKMeansClustering.h
   HierarchicalKMeansClustering.hpp
   KMeansClustering.h
   KMeansClustering.hpp
   Vocabulary.h
-) 
+)
 
-ADD_LIBRARY(gflip_vocabulary SHARED ${vocabulary_SRCS})
-TARGET_LINK_LIBRARIES(gflip_vocabulary ${FLIRT_LIBRARIES})
+add_library(gflip_vocabulary SHARED ${vocabulary_SRCS})
+target_link_libraries(gflip_vocabulary ${FLIRT_LIBRARIES} ${Boost_LIBRARIES})
 
 install(TARGETS gflip_vocabulary
     RUNTIME DESTINATION bin

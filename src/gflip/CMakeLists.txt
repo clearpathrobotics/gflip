@@ -1,12 +1,13 @@
-SET(gflip_SRCS 
+set(gflip_SRCS
   gflip_engine.cpp
-) 
+)
 
-SET(gflip_HDRS 
+set(gflip_HDRS
   gflip_engine.hpp
-) 
+)
 
-ADD_LIBRARY(gflip_gflip SHARED ${gflip_SRCS})
+add_library(gflip_gflip SHARED ${gflip_SRCS})
+target_link_libraries(gflip_gflip ${Boost_LIBRARIES})
 
 install(TARGETS gflip_gflip
     RUNTIME DESTINATION bin
