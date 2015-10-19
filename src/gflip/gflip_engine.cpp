@@ -22,8 +22,57 @@
 
 #include <gflip/gflip_engine.hpp>
 
-
+#include <time.h>
 // ---------------------------------------------------------
+
+
+class ScopedTimer
+{
+public:
+
+  ScopedTimer(std::string s = "no_name")
+    : name(s)
+  {
+    clock_gettime(CLOCK_REALTIME,  &begin);
+  }
+
+  ~ScopedTimer()
+  {
+    clock_gettime(CLOCK_REALTIME,  &end);
+    double duration = ((end.tv_sec * 1e9 + end.tv_nsec) -
+                      (begin.tv_sec * 1e9 + begin.tv_nsec)) * 1e-6;
+    printf("%s took: %f\n", name.c_str(), duration);
+  }
+
+private:
+  timespec begin;
+  timespec end;
+  std::string name;
+};
+
+void gflip_engine::init()
+{
+  max_bow_len = MAX_BOW_LENGTH;
+  tf_idf = std::vector <tf_idf_db> (dictionary_dimensions);
+
+  cache_binomial_coeff();
+
+
+  if(bow_type==1)
+          reformulate_to_bagofdistances();
+
+  normgfp_rc_idf_sum.resize(max_bow_len);
+  normgfp_rc_weak_match.resize(max_bow_len);
+
+  //mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
+  //mtchgfp_rc_idf_sum.resize(laserscan_bow.size() * max_bow_len);
+
+  //mtchgfp_used_doc_idx.resize(laserscan_bow.size());
+  //mtchgfp_max_det_idx = std::vector <int> (laserscan_bow.size());
+  //mtchgfp_min_det_idx = std::vector <int> (laserscan_bow.size());
+
+}
+
 
 void gflip_engine::prepare(void)
 {	
@@ -88,6 +137,35 @@ void gflip_engine:: reformulate_to_bagofdistances(void)
 
 // ---------------------------------------------------------
 
+
+double gflip_engine::norm_gfp(scan_bow & bow)
+{
+    double& norm_wgv = bow.norm_wgv;
+    norm_wgv = 0;
+    int s;
+    double combo, sum_idf;
+    std::map<int,std::vector<int> >::const_iterator iter = bow.normgfp_rc.begin();
+
+    for(; iter != bow.normgfp_rc.end(); ++iter)
+     {
+       const std::vector<int>& v = iter->second;
+       s = v.size();
+       if(s<wgv_kernel_size)
+         continue;
+       sum_idf = 0;
+       combo = cached_binomial_coeff[s - 1];
+       for(int j = 0; j<s; ++j)
+        sum_idf += tf_idf[v[j]].idf;
+
+       norm_wgv += combo*sum_idf;
+     }
+
+     if(norm_wgv > 0)
+       norm_wgv = sqrt(norm_wgv);
+
+     return norm_wgv;
+}
+
 double gflip_engine::norm_gfp(std::vector <int> & query_v)
 {
 	double norm2 = 0,query_v_norm=1;
@@ -137,7 +215,15 @@ double gflip_engine::norm_gfp(std::vector <int> & query_v)
 
 void gflip_engine::matching_gfp(std::vector <int> &query_v)
 {
+	ScopedTimer scopedTimer("Matching took");
 	int middleidx = max_bow_len/2;
+	//TODO Fix this so we don't have to reallocate everytime
+	mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
+	mtchgfp_rc_idf_sum.resize(laserscan_bow.size() * max_bow_len);
+	mtchgfp_used_doc_idx.resize(laserscan_bow.size());
+	mtchgfp_max_det_idx = std::vector <int> (laserscan_bow.size());
+	mtchgfp_min_det_idx = std::vector <int> (laserscan_bow.size());
+
 	std::fill(mtchgfp_used_doc_idx.begin(), mtchgfp_used_doc_idx.end(), 0);
 	std::fill(mtchgfp_min_det_idx.begin(), mtchgfp_min_det_idx.end(), +INT_MAX);
 	std::fill(mtchgfp_max_det_idx.begin(), mtchgfp_max_det_idx.end(), -INT_MAX);
@@ -358,10 +444,137 @@ void gflip_engine::run_evaluation(int dtype)
 
 // ---------------------------------------------------------
 
+void gflip_engine::update_tfidf()
+{
+  {
+    ScopedTimer scopedTimer("Adding docs");
+    for (int i=0; i<laserscan_bow.size(); ++i)
+    {
+      add_doc_stats(i);
+    }
+  }
+
+  {
+    ScopedTimer scopedTimer("Updating tf_idf");
+    compute_idfs();
+    compute_tf_idfs();
+  }
+
+  {
+    ScopedTimer scopedTimer(" tf_idf");
+    for(uint i=0;i<laserscan_bow.size();i++)
+      laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i]);
+  }
+
+}
+
+// ---------------------------------------------------------
+
+
+void gflip_engine::update_tfidf(int nscans)
+{
+  {
+    ScopedTimer scopedTimer("Adding scans");
+    for (int i=laserscan_bow.size()- nscans; i<laserscan_bow.size(); ++i)
+    {
+      add_doc_stats(i);
+    }
+  }
+  {
+    ScopedTimer scopedTimer("Updating tf_idf");
+    compute_idfs();
+    compute_tf_idfs();
+  }
+
+  {
+    ScopedTimer scopedTimer("Normalizing tf_idf");
+    for(uint i=0;i<laserscan_bow.size();i++)
+      laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i]);
+  }
+}
+
+
+
+// ---------------------------------------------------------
+
+void gflip_engine::add_doc_stats(int doc_id)
+{
+
+    std::map<int, std::vector<int> >::const_iterator it = laserscan_bow[doc_id].histogram.begin();
+    int num_words_unnormalized = laserscan_bow[doc_id].w.size();
+    for(; it != laserscan_bow[doc_id].histogram.end(); ++it)
+    {
+      int word_id = it->first;
+      tf_idf[word_id].term_count_unnormalized.push_back(it->second.size());
+      tf_idf[word_id].num_words.push_back(num_words_unnormalized);
+      laserscan_bow[doc_id].word_ref[word_id] = tf_idf[word_id].doc_id.size();
+      tf_idf[word_id].doc_id.push_back(doc_id);
+      tf_idf[word_id].term_count.push_back((double)it->second.size() / (double)num_words_unnormalized);
+      tf_idf[word_id].word_order.push_back(tf_idf_db_ordercache(it->second));
+      tf_idf[word_id].tf_idf_doc_normed.push_back(-1);
+      tf_idf[word_id].wf_idf_doc_normed.push_back(-1);
+      tf_idf[word_id].ntf_idf_doc_normed.push_back(-1);
+    }
+}
+
+void gflip_engine::compute_tf_idfs()
+{
+  for(uint doc_id=0;doc_id<laserscan_bow.size();doc_id++)
+  {
+    std::map<int, int>::const_iterator word_id_iter = laserscan_bow[doc_id].word_ref.begin();
+    double sum=0,sum_wf=0,sum_vss=0;
+    double inverse_max_histogram = 1.0/laserscan_bow[doc_id].max_histogram;
+    for (; word_id_iter!=laserscan_bow[doc_id].word_ref.end(); ++word_id_iter)
+    {
+      int doc_ref = word_id_iter->second;
+      tf_idf_db & db = tf_idf[word_id_iter->first];
+      double val = db.tf_idf_doc_normed[doc_ref]  = db.term_count[doc_ref] * db.idf;
+      double val_wf = db.wf_idf_doc_normed[doc_ref] =  (1 + log(db.term_count_unnormalized[doc_ref]) ) * db.idf;
+      double val_vss = db.ntf_idf_doc_normed[doc_ref] = alpha_vss + ( (1.0 - alpha_vss) * db.term_count_unnormalized[doc_ref]) * inverse_max_histogram;
+      sum+=val*val;
+      sum_wf+=val_wf*val_wf;
+      sum_vss+=val_vss*val_vss;
+    }
+
+    double inverse_norm=1.0/sqrt(sum);
+    double inverse_norm_wf=1.0/sqrt(sum_wf);
+    double inverse_norm_vss=1.0/sqrt(sum_vss);
+    double versum=0, versum_wf=0, versum_vss=0;
+
+    for (word_id_iter = laserscan_bow[doc_id].word_ref.begin(); word_id_iter!=laserscan_bow[doc_id].word_ref.end(); ++word_id_iter)
+    {
+      int doc_ref = word_id_iter->second;
+      tf_idf_db & db = tf_idf[word_id_iter->first];
+      db.tf_idf_doc_normed[doc_ref] *= inverse_norm;
+      db.wf_idf_doc_normed[doc_ref] *= inverse_norm_wf;
+      db.ntf_idf_doc_normed[doc_ref] *= inverse_norm_vss;
+      versum += db.tf_idf_doc_normed[doc_ref]*db.tf_idf_doc_normed[doc_ref];
+      versum_wf += db.wf_idf_doc_normed[doc_ref]*db.wf_idf_doc_normed[doc_ref];
+      versum_vss += db.ntf_idf_doc_normed[doc_ref]*db.ntf_idf_doc_normed[doc_ref];
+    }
+
+   }
+
+}
+
+void gflip_engine::compute_idfs()
+{
+  uint corpus_size = laserscan_bow.size();
+  for (uint word_id = 0; word_id < dictionary_dimensions; ++word_id)
+  {
+    tf_idf[word_id].num_doc_containing_the_word = tf_idf[word_id].doc_id.size();
+    tf_idf[word_id].corpus_size = corpus_size;
+    tf_idf[word_id].idf = log( (double)corpus_size / (double) tf_idf[word_id].num_doc_containing_the_word );
+  }
+}
+
+
+
+
 
 void gflip_engine::build_tfidf(void)
 {
-	//~ find id size, maxlen
+    //~ find id size, maxlen
 	int maxid= -1;
 	int maxid_idx = -1;
 	max_bow_len = -INT_MAX;
@@ -386,8 +599,8 @@ void gflip_engine::build_tfidf(void)
 	dictionary_dimensions = maxid;
 	//~ do it large
 	max_bow_len = (max_bow_len+1)*2;
-	std::cout << "Detected dictionary dimension: "<< maxid << " @ "<< maxid_idx << std::endl;
-	std::cout << "Detected max bow len : "<< max_bow_len << std::endl;
+	//std::cout << "Detected dictionary dimension: "<< maxid << " @ "<< maxid_idx << std::endl;
+	//std::cout << "Detected max bow len : "<< max_bow_len << std::endl;
 
 	tf_idf = std::vector <tf_idf_db> (maxid);
 	for(int word_id=0; word_id<maxid; word_id++)
@@ -535,6 +748,7 @@ void gflip_engine::insert_wordscan(std::vector <int> scanbow, std::vector <doubl
 		tmpbow.w_x[i] = xpos[i];
 		tmpbow.w_y[i] = ypos[i];
 	}
+        tmpbow.compute_word_weight();
 	laserscan_bow.push_back(tmpbow);
 	number_of_scans = laserscan_bow.size();
 

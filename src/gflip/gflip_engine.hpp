@@ -34,8 +34,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <boost/math/special_functions/binomial.hpp>
+#include <boost/foreach.hpp>
 #include <sys/time.h>  
 #include <algorithm>
+#include <map>
 
 
 //~ Basic and bag of distances  defaults   
@@ -46,6 +48,8 @@
 #define DEFAULT_ALPHASMOOTH 0.4
 #define DEFAULT_BAGDISTANCE 0
 #define DEFAULT_CACHEBINOMIAL 10000
+//~ TODO change the matching function so this is not needed anymore
+#define MAX_BOW_LENGTH 1000
 
 /**
  * Contains a 2D scan represented by FLIRT words identified by their index, their (TF-IDF) weights, their norm for GFP
@@ -55,18 +59,53 @@
  
 class scan_bow
 {
-	public:
-		std::vector <int> w, word_weight_unnormalized;
-		std::vector <double> w_x, w_y, word_weight, tfidf_w;
-		double sum_weight,  norm_wgv;
-		scan_bow(int no)
-		{
-			w= std::vector <int> (no);
-			w_x = std::vector <double> (no);
-			w_y = std::vector <double> (no);
-		}
+public:
+  std::vector <int> w, word_weight_unnormalized;
+  std::vector <double> w_x, w_y, word_weight, tfidf_w;
+  std::map<int, std::vector<int> > histogram;
+  std::map<int, std::vector<int> > normgfp_rc;
+  std::map<int, int> word_ref;
+  double sum_weight,  norm_wgv;
+  int max_histogram;
+  scan_bow(int no)
+  {
+    w= std::vector <int> (no);
+    w_x = std::vector <double> (no);
+    w_y = std::vector <double> (no);
+    max_histogram = 0;
+  }
+  void compute_word_weight()
+  {
+    word_weight_unnormalized = std::vector<int>(w.size(),0.0);
+    word_weight = std::vector<double>(w.size(),0.0);
+    int index = 0;
+    sum_weight = 0.0;
+    BOOST_FOREACH (int word, w)
+    {
+      int j=0;
+      BOOST_FOREACH(int other, w)
+      {
+        if(other==word)
+        {
+          normgfp_rc[index-j].push_back(word);
+          word_weight_unnormalized[index]++;
+          if (std::find(histogram[word].begin(), histogram[word].end(), j) == histogram[word].end())
+            histogram[word].push_back(j);
+        }
+        ++j;
+      }
+      if (word_weight_unnormalized[index] > max_histogram)
+        max_histogram = word_weight_unnormalized[index];
+      sum_weight += word_weight_unnormalized[index];
+      word_weight[index] = word_weight_unnormalized[index];
+      index++;
+    }
+    BOOST_FOREACH(double weight, word_weight)
+        weight /= sum_weight;
+  }
+
 };
- 
+
  
 
 /**
@@ -78,6 +117,7 @@ class tf_idf_db_ordercache
 {
 	public:
 		std::vector<int> pos;
+    tf_idf_db_ordercache(std::vector<int> p = std::vector<int>()): pos(p){}
 };
 
 
@@ -108,6 +148,24 @@ class tf_idf_db
 			num_doc_containing_the_word = 0;
 			corpus_size = 0;
 		}
+
+                void compare(tf_idf_db other)
+                {
+                  std::vector<tf_idf_db_ordercache>::const_iterator db = word_order.begin(),
+                      other_db = other.word_order.begin();
+                  for(; db != word_order.end() && other_db != other.word_order.end(); ++db, ++other_db)
+                    assert(db->pos == other_db->pos);
+                  assert(doc_id == other.doc_id);
+                  assert(term_count_unnormalized == other.term_count_unnormalized);
+                  assert(term_count == other.term_count);
+                  assert(num_words == other.num_words);
+                  assert(corpus_size == other.corpus_size);
+                  assert(idf == other.idf);
+                  assert(ntf_idf_doc_normed == other.ntf_idf_doc_normed);
+                  assert(tf_idf_doc_normed == other.tf_idf_doc_normed);
+                  assert(wf_idf_doc_normed == other.wf_idf_doc_normed);
+                  assert(num_doc_containing_the_word == other.num_doc_containing_the_word);
+                }
 };
 
 /**
@@ -132,14 +190,20 @@ class gflip_engine
 		std::vector<double> cached_binomial_coeff, mtchgfp_rc_idf_sum, normgfp_rc_idf_sum;
 		std::vector <int> mtchgfp_min_det_idx, mtchgfp_max_det_idx, mtchgfp_rc_weak_match, normgfp_rc_weak_match;
 		std::vector<char> mtchgfp_used_doc_idx;
+        std::vector < double > mxtf_val;
 
 		//~ functions
  		double norm_gfp(std::vector <int> & query_v);
+                double norm_gfp(scan_bow & bow);
  		void matching_bow(std::vector <int> &query_v );
 		void matching_gfp(std::vector <int> &query_v );
 		void voting_tfidf_weak_verificationOLD(std::vector <int> &query_v );		
 		void reformulate_to_bagofdistances(void);
 		void cache_binomial_coeff(void);
+                void add_doc_stats(int doc_id);
+                void compute_idfs();
+                void compute_tf_idfs();
+
 	
 	public:
 
@@ -168,6 +232,19 @@ class gflip_engine
 		 * @author Luciano Spinello
 		 */		
  		void build_tfidf(void);
+
+                /**
+                 * @brief update_tfidf with new scans
+                 * @param number of new scans added to laserscan_bow that are not yet
+                 * considered in the tf_idf
+                 */
+                void update_tfidf(int num_scans);
+
+                /**
+                 * @brief update_tfidf
+                 * Updates the tf_idf for all scans in laserscan_bows
+                 */
+                void update_tfidf();
 
 		/**
 		 * Matches all the scans in the dataset vs all the scans in the dataset
@@ -202,6 +279,12 @@ class gflip_engine
 		void prepare(void);
 
 		/**
+		 * Initialize the binomial coefficient cash
+		 * Allocates containers
+		 */
+		void init(void);
+
+		/**
 		 * Constructor
 		 * 
 		 * @param krnl Kernel size
@@ -225,6 +308,16 @@ class gflip_engine
 		    bow_dst_interval=DEFAULT_BOWDST_INTERVAL;
 		    bow_dst_end=DEFAULT_BOWDST_END;
 
+		}
+
+		/*
+		 * Sets the dimension (number of words)  of the dictionary
+		 * @param dictionary_size number of words in the dictionary
+		 */
+                void setDictionaryDimension(int dictionary_size)
+		{ 
+                       dictionary_dimensions = dictionary_size;
+                       std::cout<<"Dictionary dimension "<<dictionary_dimensions<<std::endl;
 		}
 		
 };
