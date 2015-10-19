@@ -4,8 +4,8 @@
 #  @CMAKE_PROJECT_NAME@_INCLUDE_DIRS - Include directories for @CMAKE_PROJECT_NAME@
 #  @CMAKE_PROJECT_NAME@_LIBRARIES    - Libraries for @CMAKE_PROJECT_NAME@
 
-set(GFLIP_INCLUDE_DIRS @CMAKE_INSTALL_PREFIX@/include/gflip)
+set(gflip_INCLUDE_DIRS @CMAKE_INSTALL_PREFIX@/include/gflip)
 
 foreach(lib gflip vocabulary)
-    list(APPEND FLIRT_LIBRARIES @CMAKE_INSTALL_PREFIX@/lib/gflip/lib${lib}.so)
+    list(APPEND gflip_LIBRARIES @CMAKE_INSTALL_PREFIX@/lib/libgflip_${lib}.so)
 endforeach()
