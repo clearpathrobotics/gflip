@@ -10,12 +10,12 @@ SET(vocabulary_HDRS
   Vocabulary.h
 ) 
 
-ADD_LIBRARY(vocabulary SHARED ${vocabulary_SRCS})
-TARGET_LINK_LIBRARIES(vocabulary ${FLIRT_LIBRARIES})
+ADD_LIBRARY(gflip_vocabulary SHARED ${vocabulary_SRCS})
+TARGET_LINK_LIBRARIES(gflip_vocabulary ${FLIRT_LIBRARIES})
 
-install(TARGETS vocabulary
+install(TARGETS gflip_vocabulary
     RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib/${PROJECT_NAME}
-    ARCHIVE DESTINATION lib/${PROJECT_NAME})
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
 
 install(FILES ${vocabulary_HDRS} DESTINATION include/${PROJECT_NAME}/vocabulary)

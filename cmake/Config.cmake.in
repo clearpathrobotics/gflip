@@ -7,5 +7,5 @@
 set(GFLIP_INCLUDE_DIRS @CMAKE_INSTALL_PREFIX@/include/gflip)
 
 foreach(lib gflip vocabulary)
-    list(APPEND FLIRT_LIBRARIES @CMAKE_INSTALL_PREFIX@/lib/gflip/lib${lib}.so)
+    list(APPEND GFLIP_LIBRARIES @CMAKE_INSTALL_PREFIX@/lib/libgflip_${lib}.so)
 endforeach()
