@@ -39,8 +39,8 @@ public:
   ~ScopedTimer()
   {
     clock_gettime(CLOCK_REALTIME,  &end);
-    double duration = ((end.tv_sec * 10e9 + end.tv_nsec) -
-                      (begin.tv_sec * 10e9 + begin.tv_nsec)) * 1e-6;
+    double duration = ((end.tv_sec * 1e9 + end.tv_nsec) -
+                      (begin.tv_sec * 1e9 + begin.tv_nsec)) * 1e-6;
     printf("%s took: %f\n", name.c_str(), duration);
   }
 
@@ -72,6 +72,7 @@ void gflip_engine::init()
   //mtchgfp_min_det_idx = std::vector <int> (laserscan_bow.size());
 
 }
+
 
 void gflip_engine::prepare(void)
 {	
@@ -500,14 +501,15 @@ void gflip_engine::add_doc_stats(int doc_id)
 {
 
     std::map<int, std::vector<int> >::const_iterator it = laserscan_bow[doc_id].histogram.begin();
+    int num_words_unnormalized = laserscan_bow[doc_id].w.size();
     for(; it != laserscan_bow[doc_id].histogram.end(); ++it)
     {
       int word_id = it->first;
       tf_idf[word_id].term_count_unnormalized.push_back(it->second.size());
-      tf_idf[word_id].num_words.push_back(laserscan_bow[doc_id].w.size());
+      tf_idf[word_id].num_words.push_back(num_words_unnormalized);
       laserscan_bow[doc_id].word_ref[word_id] = tf_idf[word_id].doc_id.size();
       tf_idf[word_id].doc_id.push_back(doc_id);
-      tf_idf[word_id].term_count.push_back((double)it->second.size() / (double)laserscan_bow[doc_id].w.size());
+      tf_idf[word_id].term_count.push_back((double)it->second.size() / (double)num_words_unnormalized);
       tf_idf[word_id].word_order.push_back(tf_idf_db_ordercache(it->second));
       tf_idf[word_id].tf_idf_doc_normed.push_back(-1);
       tf_idf[word_id].wf_idf_doc_normed.push_back(-1);
@@ -517,34 +519,35 @@ void gflip_engine::add_doc_stats(int doc_id)
 
 void gflip_engine::compute_tf_idfs()
 {
-  for(int doc_id=0;doc_id<(int)laserscan_bow.size();doc_id++)
+  for(uint doc_id=0;doc_id<laserscan_bow.size();doc_id++)
   {
     std::map<int, int>::const_iterator word_id_iter = laserscan_bow[doc_id].word_ref.begin();
     double sum=0,sum_wf=0,sum_vss=0;
+    double inverse_max_histogram = 1.0/laserscan_bow[doc_id].max_histogram;
     for (; word_id_iter!=laserscan_bow[doc_id].word_ref.end(); ++word_id_iter)
     {
       int doc_ref = word_id_iter->second;
       tf_idf_db & db = tf_idf[word_id_iter->first];
       double val = db.tf_idf_doc_normed[doc_ref]  = db.term_count[doc_ref] * db.idf;
       double val_wf = db.wf_idf_doc_normed[doc_ref] =  (1 + log(db.term_count_unnormalized[doc_ref]) ) * db.idf;
-      double val_vss = db.ntf_idf_doc_normed[doc_ref] = alpha_vss + ( (1.0 - alpha_vss) * db.term_count_unnormalized[doc_ref]) / laserscan_bow[doc_id].max_histogram;
+      double val_vss = db.ntf_idf_doc_normed[doc_ref] = alpha_vss + ( (1.0 - alpha_vss) * db.term_count_unnormalized[doc_ref]) * inverse_max_histogram;
       sum+=val*val;
       sum_wf+=val_wf*val_wf;
       sum_vss+=val_vss*val_vss;
     }
 
-    double norm=sqrt(sum);
-    double norm_wf=sqrt(sum_wf);
-    double norm_vss=sqrt(sum_vss);
+    double inverse_norm=1.0/sqrt(sum);
+    double inverse_norm_wf=1.0/sqrt(sum_wf);
+    double inverse_norm_vss=1.0/sqrt(sum_vss);
     double versum=0, versum_wf=0, versum_vss=0;
 
     for (word_id_iter = laserscan_bow[doc_id].word_ref.begin(); word_id_iter!=laserscan_bow[doc_id].word_ref.end(); ++word_id_iter)
     {
       int doc_ref = word_id_iter->second;
       tf_idf_db & db = tf_idf[word_id_iter->first];
-      db.tf_idf_doc_normed[doc_ref] /= norm;
-      db.wf_idf_doc_normed[doc_ref] /= norm_wf;
-      db.ntf_idf_doc_normed[doc_ref] /= norm_vss;
+      db.tf_idf_doc_normed[doc_ref] *= inverse_norm;
+      db.wf_idf_doc_normed[doc_ref] *= inverse_norm_wf;
+      db.ntf_idf_doc_normed[doc_ref] *= inverse_norm_vss;
       versum += db.tf_idf_doc_normed[doc_ref]*db.tf_idf_doc_normed[doc_ref];
       versum_wf += db.wf_idf_doc_normed[doc_ref]*db.wf_idf_doc_normed[doc_ref];
       versum_vss += db.ntf_idf_doc_normed[doc_ref]*db.ntf_idf_doc_normed[doc_ref];
@@ -556,11 +559,12 @@ void gflip_engine::compute_tf_idfs()
 
 void gflip_engine::compute_idfs()
 {
+  uint corpus_size = laserscan_bow.size();
   for (uint word_id = 0; word_id < dictionary_dimensions; ++word_id)
   {
     tf_idf[word_id].num_doc_containing_the_word = tf_idf[word_id].doc_id.size();
-    tf_idf[word_id].corpus_size = laserscan_bow.size();
-    tf_idf[word_id].idf = log( (double)tf_idf[word_id].corpus_size / (double) tf_idf[word_id].num_doc_containing_the_word );
+    tf_idf[word_id].corpus_size = corpus_size;
+    tf_idf[word_id].idf = log( (double)corpus_size / (double) tf_idf[word_id].num_doc_containing_the_word );
   }
 }
 
