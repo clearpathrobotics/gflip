@@ -22,10 +22,19 @@
 
 #include <gflip/gflip_engine.hpp>
 
+#ifdef DEBUG_TIMING
+#define SCOPED_TIMER(t, s) ScopedTimer t(s)
+#else
+#define SCOPED_TIMER(t, s)
+#endif
+
+#ifdef DEBUG_TIMING
 #include <time.h>
+#endif
 // ---------------------------------------------------------
 
 
+#ifdef DEBUG_TIMING
 class ScopedTimer
 {
 public:
@@ -49,6 +58,7 @@ private:
   timespec end;
   std::string name;
 };
+#endif
 
 void gflip_engine::init()
 {
@@ -215,7 +225,7 @@ double gflip_engine::norm_gfp(std::vector <int> & query_v)
 
 void gflip_engine::matching_gfp(std::vector <int> &query_v)
 {
-	ScopedTimer scopedTimer("Matching took");
+	SCOPED_TIMER(scopedTimer, "Matching took");
 	int middleidx = max_bow_len/2;
 	//TODO Fix this so we don't have to reallocate everytime
 	mtchgfp_rc_weak_match.resize(laserscan_bow.size() * max_bow_len);
@@ -447,7 +457,7 @@ void gflip_engine::run_evaluation(int dtype)
 void gflip_engine::update_tfidf()
 {
   {
-    ScopedTimer scopedTimer("Adding docs");
+    SCOPED_TIMER(scopedTimer, "Adding docs");
     for (int i=0; i<laserscan_bow.size(); ++i)
     {
       add_doc_stats(i);
@@ -455,13 +465,13 @@ void gflip_engine::update_tfidf()
   }
 
   {
-    ScopedTimer scopedTimer("Updating tf_idf");
+    SCOPED_TIMER(scopedTimer, "Updating tf_idf");
     compute_idfs();
     compute_tf_idfs();
   }
 
   {
-    ScopedTimer scopedTimer(" tf_idf");
+    SCOPED_TIMER(scopedTimer, " tf_idf");
     for(uint i=0;i<laserscan_bow.size();i++)
       laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i]);
   }
@@ -474,20 +484,20 @@ void gflip_engine::update_tfidf()
 void gflip_engine::update_tfidf(int nscans)
 {
   {
-    ScopedTimer scopedTimer("Adding scans");
+    SCOPED_TIMER(scopedTimer, "Adding scans");
     for (int i=laserscan_bow.size()- nscans; i<laserscan_bow.size(); ++i)
     {
       add_doc_stats(i);
     }
   }
   {
-    ScopedTimer scopedTimer("Updating tf_idf");
+    SCOPED_TIMER(scopedTimer, "Updating tf_idf");
     compute_idfs();
     compute_tf_idfs();
   }
 
   {
-    ScopedTimer scopedTimer("Normalizing tf_idf");
+    SCOPED_TIMER(scopedTimer, "Normalizing tf_idf");
     for(uint i=0;i<laserscan_bow.size();i++)
       laserscan_bow[i].norm_wgv = norm_gfp(laserscan_bow[i]);
   }
