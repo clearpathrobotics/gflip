@@ -253,9 +253,9 @@ void gflip_engine::matching_gfp(std::vector <int> &query_v)
 			mtchgfp_used_doc_idx[doc_idx] = 1;
 
 			//~ match positions
-			for(uint h=0;h<tf_idf[word_id].word_order[a].pos.size();h++)
+                        for(uint h=0;h<tf_idf[word_id].word_order[a].size();h++)
 			{
-				int w_order_dif=j-tf_idf[word_id].word_order[a].pos[h];
+                                int w_order_dif=j-tf_idf[word_id].word_order[a][h];
 				int rcidx = (max_bow_len * doc_idx) + (middleidx+w_order_dif);
 							
 				mtchgfp_rc_weak_match[rcidx]++;
@@ -625,14 +625,14 @@ void gflip_engine::build_tfidf(void)
 				if(laserscan_bow[i].w[j] == word_id)
 				{
 					term_count_unnormalized++;
-					w_order.pos.push_back(j);
+                                        w_order.push_back(j);
 				}
 			}
 			//~ found a word match
 			if(term_count_unnormalized)
 			{
 				tf_idf[word_id].term_count_unnormalized.push_back(term_count_unnormalized);
-				tf_idf[word_id].num_words.push_back(laserscan_bow[i].w.size());
+                                tf_idf[word_id].num_words.push_back(laserscan_bow[i].w.size());
 				tf_idf[word_id].doc_id.push_back(i);
 				tf_idf[word_id].term_count.push_back((double)term_count_unnormalized / (double)laserscan_bow[i].w.size());
 				tf_idf[word_id].word_order.push_back(w_order);
