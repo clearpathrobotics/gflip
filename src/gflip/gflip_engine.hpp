@@ -38,6 +38,10 @@
 #include <sys/time.h>  
 #include <algorithm>
 #include <map>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
 
 
 //~ Basic and bag of distances  defaults   
@@ -59,50 +63,80 @@
  
 class scan_bow
 {
-public:
-  std::vector <int> w, word_weight_unnormalized;
-  std::vector <double> w_x, w_y, word_weight, tfidf_w;
-  std::map<int, std::vector<int> > histogram;
-  std::map<int, std::vector<int> > normgfp_rc;
-  std::map<int, int> word_ref;
-  double sum_weight,  norm_wgv;
-  int max_histogram;
-  scan_bow(int no)
-  {
-    w= std::vector <int> (no);
-    w_x = std::vector <double> (no);
-    w_y = std::vector <double> (no);
-    max_histogram = 0;
-  }
-  void compute_word_weight()
-  {
-    word_weight_unnormalized = std::vector<int>(w.size(),0.0);
-    word_weight = std::vector<double>(w.size(),0.0);
-    int index = 0;
-    sum_weight = 0.0;
-    BOOST_FOREACH (int word, w)
-    {
-      int j=0;
-      BOOST_FOREACH(int other, w)
-      {
-        if(other==word)
-        {
-          normgfp_rc[index-j].push_back(word);
-          word_weight_unnormalized[index]++;
-          if (std::find(histogram[word].begin(), histogram[word].end(), j) == histogram[word].end())
-            histogram[word].push_back(j);
-        }
-        ++j;
-      }
-      if (word_weight_unnormalized[index] > max_histogram)
-        max_histogram = word_weight_unnormalized[index];
-      sum_weight += word_weight_unnormalized[index];
-      word_weight[index] = word_weight_unnormalized[index];
-      index++;
-    }
-    BOOST_FOREACH(double weight, word_weight)
-        weight /= sum_weight;
-  }
+	public:
+		std::vector <int> w, word_weight_unnormalized;
+		std::vector <double> w_x, w_y, word_weight, tfidf_w;
+		std::map<int, std::vector<int> > histogram;
+		std::map<int, std::vector<int> > normgfp_rc;
+		std::map<int, int> word_ref;
+		double sum_weight,  norm_wgv;
+		int max_histogram;
+
+		scan_bow()
+		: max_histogram(0)
+		{
+		}
+
+		scan_bow(int no)
+		: max_histogram(0)
+		{
+			w= std::vector <int> (no);
+			w_x = std::vector <double> (no);
+			w_y = std::vector <double> (no);
+		}
+
+		void compute_word_weight()
+		{
+			word_weight_unnormalized = std::vector<int>(w.size(),0.0);
+			word_weight = std::vector<double>(w.size(),0.0);
+			int index = 0;
+			sum_weight = 0.0;
+			BOOST_FOREACH (int word, w)
+			{
+				int j=0;
+				BOOST_FOREACH(int other, w)
+				{
+					if(other==word)
+					{
+						normgfp_rc[index-j].push_back(word);
+						word_weight_unnormalized[index]++;
+						if (std::find(histogram[word].begin(), histogram[word].end(), j) == histogram[word].end())
+						{
+							histogram[word].push_back(j);
+						}
+					}
+					++j;
+				}
+				if (word_weight_unnormalized[index] > max_histogram)
+				{
+					max_histogram = word_weight_unnormalized[index];
+				}
+				sum_weight += word_weight_unnormalized[index];
+				word_weight[index] = word_weight_unnormalized[index];
+				index++;
+			}
+			BOOST_FOREACH(double weight, word_weight)
+			weight /= sum_weight;
+		}
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive & ar, const unsigned int /* version */)
+		{
+			ar & w;
+			ar & word_weight_unnormalized;
+			ar & w_x;
+			ar & w_y;
+			ar & word_weight;
+			ar & tfidf_w;
+			ar & histogram;
+			ar & normgfp_rc;
+			ar & word_ref;
+			ar & sum_weight;
+			ar & norm_wgv;
+			ar & max_histogram;
+		}
 
 };
 
@@ -113,12 +147,8 @@ public:
  * 
  * @author Luciano Spinello
  */	
-class tf_idf_db_ordercache
-{
-	public:
-		std::vector<int> pos;
-    tf_idf_db_ordercache(std::vector<int> p = std::vector<int>()): pos(p){}
-};
+
+typedef std::vector<int> tf_idf_db_ordercache;
 
 
 /**
@@ -149,23 +179,43 @@ class tf_idf_db
 			corpus_size = 0;
 		}
 
-                void compare(tf_idf_db other)
-                {
-                  std::vector<tf_idf_db_ordercache>::const_iterator db = word_order.begin(),
-                      other_db = other.word_order.begin();
-                  for(; db != word_order.end() && other_db != other.word_order.end(); ++db, ++other_db)
-                    assert(db->pos == other_db->pos);
-                  assert(doc_id == other.doc_id);
-                  assert(term_count_unnormalized == other.term_count_unnormalized);
-                  assert(term_count == other.term_count);
-                  assert(num_words == other.num_words);
-                  assert(corpus_size == other.corpus_size);
-                  assert(idf == other.idf);
-                  assert(ntf_idf_doc_normed == other.ntf_idf_doc_normed);
-                  assert(tf_idf_doc_normed == other.tf_idf_doc_normed);
-                  assert(wf_idf_doc_normed == other.wf_idf_doc_normed);
-                  assert(num_doc_containing_the_word == other.num_doc_containing_the_word);
-                }
+		void compare(tf_idf_db other)
+		{
+			std::vector<tf_idf_db_ordercache>::const_iterator db = word_order.begin();
+			std::vector<tf_idf_db_ordercache>::const_iterator other_db = other.word_order.begin();
+			for(; db != word_order.end() && other_db != other.word_order.end(); ++db, ++other_db)
+			{
+				assert(*db == *other_db);
+			}
+			assert(doc_id == other.doc_id);
+			assert(term_count_unnormalized == other.term_count_unnormalized);
+			assert(term_count == other.term_count);
+			assert(num_words == other.num_words);
+			assert(corpus_size == other.corpus_size);
+			assert(idf == other.idf);
+			assert(ntf_idf_doc_normed == other.ntf_idf_doc_normed);
+			assert(tf_idf_doc_normed == other.tf_idf_doc_normed);
+			assert(wf_idf_doc_normed == other.wf_idf_doc_normed);
+			assert(num_doc_containing_the_word == other.num_doc_containing_the_word);
+		}
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive & ar, const unsigned int /* version */)
+		{
+			ar & word_order;
+			ar & doc_id;
+			ar & term_count_unnormalized;
+			ar & tf_idf_doc_normed;
+			ar & ntf_idf_doc_normed;
+			ar & wf_idf_doc_normed;
+			ar & num_words;
+			ar & term_count;
+			ar & num_doc_containing_the_word;
+			ar & corpus_size;
+			ar & idf;
+		}
 };
 
 /**
@@ -305,9 +355,8 @@ class gflip_engine
 			
 			//~ basic defaults for bag of distances
 			bow_dst_start= DEFAULT_BOWDST_START;
-		    bow_dst_interval=DEFAULT_BOWDST_INTERVAL;
-		    bow_dst_end=DEFAULT_BOWDST_END;
-
+			bow_dst_interval=DEFAULT_BOWDST_INTERVAL;
+			bow_dst_end=DEFAULT_BOWDST_END;
 		}
 
 		/*
@@ -320,6 +369,43 @@ class gflip_engine
                        std::cout<<"Dictionary dimension "<<dictionary_dimensions<<std::endl;
 		}
 		
+		/*
+		 * Serialize the TF_IDF and scan_bows to an archive
+		 * @param o_archive output archive to serialize to
+		*/
+		void save(boost::archive::binary_oarchive& o_archive) const
+		{
+			try
+			{
+				o_archive << laserscan_bow;
+				o_archive << tf_idf;
+			}
+			catch(std::exception)
+			{
+				throw;
+			}
+		}
+
+		/*
+		 * Loads TF_IDF and scan_bows from a boost archive
+		 * @param i_archive input archive to load from
+		*/
+		void load(boost::archive::binary_iarchive& i_archive)
+		{
+			laserscan_bow.clear();
+			tf_idf.clear();
+			try
+			{
+				i_archive >> laserscan_bow;
+				i_archive >> tf_idf;
+			}
+			catch(std::exception)
+			{
+				laserscan_bow.clear();
+				tf_idf.clear();
+				throw;
+			}
+		}
 };
 
 /**
