@@ -106,6 +106,7 @@ SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=gnu++0x -O0 -g3 -ggdb3 
 
 
 add_subdirectory(gflip)
+ADD_SUBDIRECTORY(matching)
 ADD_SUBDIRECTORY(vocabulary)
 ADD_SUBDIRECTORY(applications)
 
