@@ -6,12 +6,6 @@ find_package(FLIRT REQUIRED)
 FIND_PACKAGE(Boost REQUIRED COMPONENTS program_options serialization)
 find_package(Eigen REQUIRED)
 
-include_directories(
-    include
-    ${catkin_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIRS}
-    ${FLIRT_INCLUDE_DIRS}
-)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -20,6 +14,13 @@ catkin_package(
   DEPENDS
     Boost
     FLIRT
+)
+
+include_directories(
+    include
+    ${catkin_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
+    ${FLIRT_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME}
@@ -56,10 +57,9 @@ ADD_EXECUTABLE(gflip_cl_onequery examples/gflip_cl_onequery.cpp)
 TARGET_LINK_LIBRARIES(gflip_cl_onequery ${catkin_LIBRARIES} ${PROJECT_NAME})
 
 
-
 install(
-  TARGETS
-    ${PROJECT_NAME}
+  TARGETS ${PROJECT_NAME} featureExtractor learnVocabularyKMeans generateBoW
+          nnLoopClosingTest generateNN GFPLoopClosingTest gflip_cl gflip_cl_onequery
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
