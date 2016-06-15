@@ -25,8 +25,7 @@
   <exec_depend>flirtlib</exec_depend>
 
   <export>
-    <!-- Specify that this is not really a Catkin package-->
-    <!--<build_type>cmake</build_type>-->
+    <rosdoc config="rosdoc.yaml"/>
   </export>
 </package>
 
