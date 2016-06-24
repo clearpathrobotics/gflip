@@ -7,3 +7,5 @@ bin
 lib*
 build
 *.kate-swp
+doc/html/
+doc/manifest.yaml

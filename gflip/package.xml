@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>gflip</name>
+  <version>0.0.0</version>
+  <description>The gflip meta-package</description>
+
+  <maintainer email="afakih@clearpathrobotics.com">afakih</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>gflip_engine></exec_depend>
+  <exec_depend>gflip_vocabulary</exec_depend>
+
+  <export><metapackage/></export>
+
+</package>
