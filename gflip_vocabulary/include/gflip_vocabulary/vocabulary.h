@@ -56,6 +56,8 @@ class HistogramFeatureWord {
 	 * @param weights The weights' vector to scale the individual dimension of the feature vector.
 	 */
 	HistogramFeatureWord(const std::vector<double>& histogram = std::vector<double>(), const HistogramDistance<double>* distance = NULL, const std::vector<double>& weights = std::vector<double>());
+
+	~HistogramFeatureWord();
 	
 	/** Returns the histogram used to represent the feature vector. */
 	inline const std::vector<double>& getHistogram() const

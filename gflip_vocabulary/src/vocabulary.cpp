@@ -30,13 +30,20 @@ HistogramFeatureWord::HistogramFeatureWord(const std::vector<double>& histogram,
     m_weights(weights)
 {
     if(!m_distance){
-	m_distance = &standardEuclideanDistance;
+	m_distance = new EuclideanDistance<double>;
     }
     if(m_weights.size() != m_mean.size()){
 	m_weights.resize(m_mean.size(), 1.);
     }
     m_elements.push_back(m_histogram);
     m_elementsWeights.push_back(m_weights);
+}
+
+HistogramFeatureWord::~HistogramFeatureWord()
+{
+    if(m_distance){
+	delete m_distance;
+    }
 }
 
 double HistogramFeatureWord::sim(const HistogramFeatureWord* other) const
