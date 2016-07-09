@@ -32,8 +32,8 @@
 #include <sensorstream/CarmenLog.h>
 #include <sensorstream/LogSensorStream.h>
 #include <sensorstream/SensorStream.h>
-#include <flirtlib/utils/SimpleMinMaxPeakFinder.h>
-#include <flirtlib/utils/HistogramDistances.h>
+#include <utils/SimpleMinMaxPeakFinder.h>
+#include <utils/HistogramDistances.h>
 #include <gflip_vocabulary/vocabulary.h>
 
 #include <gflip_engine/gflip_engine.hpp>
