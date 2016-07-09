@@ -28,7 +28,7 @@
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/export.hpp>
-#include <utils/HistogramDistances.h>
+#include <flirtlib/utils/HistogramDistances.h>
 
 /**
  * Representation for a generic feature vector to be used as a word in a dictionary.
