@@ -20,16 +20,16 @@
 // along with GFLIP.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <feature/Descriptor.h>
-#include <feature/ShapeContext.h>
-#include <feature/BetaGrid.h>
-#include <feature/InterestPoint.h>
+#include <flirtlib/feature/Descriptor.h>
+#include <flirtlib/feature/ShapeContext.h>
+#include <flirtlib/feature/BetaGrid.h>
+#include <flirtlib/feature/InterestPoint.h>
 #include <gflip_vocabulary/vocabulary.h>
-#include <utils/HistogramDistances.h>
+#include <flirtlib/utils/HistogramDistances.h>
 #include <gflip_vocabulary/kmeans_clustering.h>
 #include <gflip_vocabulary/hierarchical_kmeans_clustering.h>
-#include <geometry/point.h>
-#include <utils/PoseEstimation.h>
+#include <flirtlib/geometry/point.h>
+#include <flirtlib/utils/PoseEstimation.h>
 #include <iostream>
 #include <fstream>
 #include <string>
