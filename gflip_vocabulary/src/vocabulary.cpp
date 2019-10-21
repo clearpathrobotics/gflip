@@ -25,9 +25,8 @@
 HistogramFeatureWord::HistogramFeatureWord(const std::vector<double>& histogram, const HistogramDistance<double>* distance, const std::vector<double>& weights):
     m_histogram(histogram),
     m_mean(histogram),
-    m_number(1),
-    m_distance(distance),
-    m_weights(weights)
+    m_weights(weights),
+    m_distance(distance)
 {
     if(!m_distance){
 	m_distance = &standardEuclideanDistance;
@@ -66,7 +65,7 @@ double HistogramFeatureWord::sim(const std::vector<double>& histogram, const std
 void HistogramFeatureWord::merge(HistogramFeatureWord* other)
 {
     if(!other || m_mean.size() != other->m_mean.size()) return;
-    double normalizer = 1./double(m_number + other->m_number);
+    //double normalizer = 1./double(m_number + other->m_number);
     for(unsigned int i = 0; i < m_mean.size(); i++){
 // 	m_mean[i] = normalizer * (double(m_number) * m_mean[i] + double(other->m_number) * other->m_mean[i]);
 // 	m_weights[i] = (double(m_number) * m_weights[i] + double(other->m_number) * other->m_weights[i]);

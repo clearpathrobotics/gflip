@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(gflip_vocabulary)
 
+add_compile_options(-std=c++14 -Wall -Wextra -Werror)
+
 find_package(catkin REQUIRED)
+find_package(Boost REQUIRED COMPONENTS random serialization)
 find_package(FLIRT REQUIRED)
 
 catkin_package(

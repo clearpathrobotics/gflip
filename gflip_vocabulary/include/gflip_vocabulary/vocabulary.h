@@ -93,7 +93,7 @@ class HistogramFeatureWord {
 	std::vector<double> m_histogram; /**< The feature vector as histogram. */
 	std::vector<double> m_mean; /**< The feature vector as the mean of the elements of this word. Mainly used during KMeans. */
 	std::vector<double> m_weights; /**< The weights' vector. */
-	unsigned int m_number; /**< The number of elements for this word. Mainly used for KMeans. */
+	unsigned int m_number{1}; /**< The number of elements for this word. Mainly used for KMeans. */
 	const HistogramDistance<double>* m_distance; /**< The distance function. */
 	std::list< std::vector<double> > m_elements; /**< The elements of this word. Mainly used during KMeans. */
 	std::list< std::vector<double> > m_elementsWeights; /** The weights' vector for the elements of this word. Mainly used during KMeans. */
@@ -116,7 +116,7 @@ typedef std::vector< HistogramFeatureWord > HistogramVocabulary;
 
 
 template<class Archive>
-void HistogramFeatureWord::serialize(Archive& ar, const unsigned int version)
+void HistogramFeatureWord::serialize(Archive& ar, const unsigned int /*version*/)
 {
     ar & BOOST_SERIALIZATION_NVP(m_histogram);
     ar & BOOST_SERIALIZATION_NVP(m_mean);
